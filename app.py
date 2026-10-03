@@ -22,6 +22,56 @@ st.set_page_config(
 # ==========================================
 # 1. 凭证加载（Streamlit Secrets -> 环境变量 -> .env）
 # ==========================================
+try:
+    for _k, _v in st.secrets.items():
+        if isinstance(_v, (str, int, float)):  # 跳过嵌套表
+            os.environ.setdefault(_k, str(_v))
+except Exception:
+    pass  # 本地没有 secrets.toml 时会抛异常，直接跳过
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
+def normalize_key(v):
+    """去掉首尾空白、换行和误带的引号。"""
+    return str(v or "").strip().strip("\"'“”‘’").strip()
+
+
+NCBI_EMAIL = os.getenv("NCBI_EMAIL", "").strip()
+NCBI_API_KEY = os.getenv("NCBI_API_KEY", "").strip()
+ENV_TAVILY_KEY = normalize_key(os.getenv("TAVILY_API_KEY", ""))
+ENV_OPENROUTER_KEY = normalize_key(os.getenv("OPENROUTER_API_KEY", ""))
+
+# 邮箱改为从环境变量读取，不再把个人邮箱写死在公开代码里
+Entrez.email = NCBI_EMAIL or None
+Entrez.api_key = NCBI_API_KEY or None
+
+DEFAULT_OPENROUTER_MODEL = os.getenv(
+    "OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free"
+)
+FALLBACK_FREE_MODELS = [
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "qwen/qwen3.8-27b:free",
+    "google/gemma-4-31b-it:free",
+    "apodex/apodex-1.1-mini:free",
+    "openrouter/free",
+]
+
+DOC_COLUMNS = ["PMID/URL", "Title", "Abstract", "Year", "Source"]
+TAVILY_MAX_RESULTS = 20  # Tavily 接口上限为 20
+
+# st.dataframe / st.plotly_chart 的撑满宽度参数在新旧版本中不同
+try:
+    _ver = tuple(int(x) for x in st.__version__.split(".")[:2])
+except Exception:
+    _ver = (0, 0)
+STRETCH = {"width": "stretch"} if _ver >= (1, 49) else {"use_container_width": True}
+
+# ==========================================
 # 2. 眼科学热点主题映射字典
 # ==========================================
 # 药物自动识别：按 WHO 国际非专利药名（INN）的词干规则匹配，而不是写死具体药名。
