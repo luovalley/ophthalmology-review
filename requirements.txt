@@ -1,0 +1,9 @@
+streamlit
+pandas
+plotly
+openai
+biopython
+requests
+pypdf
+python-docx
+python-dotenv
